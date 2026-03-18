@@ -1,14 +1,115 @@
-import React, { useState } from 'react';
-<<<<<<< HEAD
+import React, { useState, useEffect } from 'react';
 import AdminDashboard from './AdminDashboard';
 import Register from './Register';
+import PhotoUpload from './PhotoUpload';
+import Ranking from './Ranking';
+import Profile from './Profile';
+import { supabase } from './supabaseClient';
+import { useRegisterSW } from 'virtual:pwa-register/react';
 
 function App() {
+  // Registrar PWA Service Worker
+  useRegisterSW({
+    onRegistered(r) {
+      console.log('SW Registered:', r);
+    },
+    onRegisterError(error) {
+      console.error('SW Registration Error:', error);
+    }
+  });
+
   const [user, setUser] = useState(null);
   const [points, setPoints] = useState(0);
   const [streak, setStreak] = useState(1);
   const [recoveries, setRecoveries] = useState(3);
   const [isAdminView, setIsAdminView] = useState(false);
+  const [currentView, setCurrentView] = useState('home'); // 'home', 'ranking', 'profile'
+  const [loading, setLoading] = useState(true);
+  const [showUpload, setShowUpload] = useState(false);
+  const [logo, setLogo] = useState(null);
+  const [installPrompt, setInstallPrompt] = useState(null);
+
+  useEffect(() => {
+    const handleBeforeInstallPrompt = (e) => {
+      e.preventDefault();
+      setInstallPrompt(e);
+    };
+
+    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    return () => window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+  }, []);
+
+  useEffect(() => {
+    // 1. Verificar si hay una sesión activa al cargar
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        await fetchProfile(session.user.id);
+      }
+      fetchSettings(); // Cargar logo global
+      setLoading(false);
+    };
+
+    const fetchSettings = async () => {
+      const { data } = await supabase.from('settings').select('*').eq('id', 1).single();
+      if (data?.logo_url) {
+        setLogo(data.logo_url);
+        updateFavicon(data.logo_url);
+      }
+    };
+
+    const updateFavicon = (url) => {
+      let link = document.querySelector("link[rel~='icon']");
+      if (!link) {
+        link = document.createElement('link');
+        link.rel = 'icon';
+        document.getElementsByTagName('head')[0].appendChild(link);
+      }
+      link.href = url;
+      
+      // También actualizar apple-touch-icon
+      let appleLink = document.querySelector("link[rel='apple-touch-icon']");
+      if (!appleLink) {
+        appleLink = document.createElement('link');
+        appleLink.rel = 'apple-touch-icon';
+        document.getElementsByTagName('head')[0].appendChild(appleLink);
+      }
+      appleLink.href = url;
+    };
+
+    checkSession();
+
+    // 2. Escuchar cambios en la autenticación
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
+      if (session) {
+        await fetchProfile(session.user.id);
+      } else {
+        setUser(null);
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, []);
+
+  const fetchProfile = async (userId) => {
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', userId)
+      .single();
+    
+    if (data && !error) {
+      setUser({
+        id: data.id,
+        name: data.full_name || 'Estudiante',
+        course: data.course || 'Global',
+        isAdmin: data.is_admin || false
+      });
+      setPoints(data.points || 0);
+      // streak y recoveries podrían venir de la DB si se implementó la tabla, 
+      // si no, usamos valores locales por ahora.
+    }
+  };
 
   const getAvatarState = (pts) => {
     if (pts >= 100) return { name: 'Árbol Grande', img: '/big_tree.png', level: 5, progress: 100 };
@@ -20,187 +121,188 @@ function App() {
 
   const avatar = getAvatarState(points);
 
-  const addPoints = () => {
-    const earned = Math.floor(Math.random() * 2) + 1;
-    setPoints(prev => {
-      const next = Math.min(prev + earned, 100);
-      // Simulación: Cada vez que sube nivel (25 pts), sumamos racha
-      if (Math.floor(next / 25) > Math.floor(prev / 25)) {
-        setStreak(s => s + 1);
-      }
-      return next;
-    });
+  const handleActionComplete = (newPoints) => {
+    setPoints(newPoints);
+    setShowUpload(false);
+    // Podríamos añadir racha aquí si es el primer envío del día
   };
 
-  const useRecovery = () => {
-    if (recoveries > 0) setRecoveries(r => r - 1);
-  };
-
-  if (isAdminView) {
-    return <AdminDashboard onBack={() => setIsAdminView(false)} />;
-  }
-
-  if (!user) {
-    return <Register onRegister={(userData) => setUser(userData)} />;
-  }
-=======
-
-function App() {
-  const [points, setPoints] = useState(0);
-  const [avatarLevel, setAvatarLevel] = useState('Semilla');
->>>>>>> 8417200 (Initial commit: EcoPunto foundation with React, Tailwind, and Supabase config)
-
-  return (
-    <div className="min-h-screen bg-[#f0fdf4] flex flex-col items-center p-4">
-      {/* Header */}
-      <header className="w-full max-w-md flex justify-between items-center py-6">
-<<<<<<< HEAD
-        <div className="flex flex-col">
-          <div className="flex items-center gap-2">
-            <div className="w-10 h-10 bg-green-500 rounded-xl flex items-center justify-center text-white text-2xl shadow-md">🌿</div>
-            <h1 className="text-2xl font-black text-green-900 tracking-tight">EcoPunto</h1>
-          </div>
-          <p className="text-sm font-bold text-green-600 ml-1">Hola, {user?.name.split(' ')[0]} 👋</p>
-        </div>
-        <div className="flex flex-col items-end gap-2">
-          <div className="bg-white px-4 py-2 rounded-2xl shadow-sm border border-green-100 flex items-center gap-2">
-            <span className="text-yellow-500 text-xl font-bold">⭐</span>
-            <span className="font-black text-green-800">{points} pts</span>
-          </div>
-          <div className="flex gap-2">
-            <div className="bg-orange-100 px-3 py-1 rounded-full flex items-center gap-1">
-              <span className="text-orange-500 font-bold">🔥</span>
-              <span className="text-orange-700 font-black text-xs">{streak}</span>
-            </div>
-            <div className="bg-blue-100 px-3 py-1 rounded-full flex items-center gap-1">
-              <span className="text-blue-500 font-bold">🛡️</span>
-              <span className="text-blue-700 font-black text-xs">{recoveries}</span>
-            </div>
-          </div>
-=======
-        <div className="flex items-center gap-2">
-          <div className="w-10 h-10 bg-green-500 rounded-xl flex items-center justify-center text-white text-2xl shadow-md">🌿</div>
-          <h1 className="text-2xl font-black text-green-900 tracking-tight">EcoPunto</h1>
-        </div>
-        <div className="bg-white px-4 py-2 rounded-2xl shadow-sm border border-green-100 flex items-center gap-2">
-          <span className="text-yellow-500 text-xl font-bold">⭐</span>
-          <span className="font-black text-green-800">{points} pts</span>
->>>>>>> 8417200 (Initial commit: EcoPunto foundation with React, Tailwind, and Supabase config)
-        </div>
-      </header>
-
-      {/* Main Card */}
+  const renderContent = () => {
+    if (currentView === 'ranking') return <Ranking />;
+    if (currentView === 'profile') return <Profile user={user} installPrompt={installPrompt} />;
+    
+    // Default: Home View
+    return (
       <main className="w-full max-w-md space-y-8 mt-4">
-        <section className="card text-center relative overflow-hidden">
+        {/* Main Avatar Card */}
+        <section className="card text-center relative overflow-hidden group">
           <div className="absolute top-0 right-0 p-4">
-<<<<<<< HEAD
-            <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">Nivel {avatar.level}</span>
+            <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider shadow-sm border border-green-200">
+              Nivel {avatar.level}
+            </span>
           </div>
           
           <h2 className="text-xl font-bold text-green-900 mb-2">Tu Avatar: <span className="text-green-600">{avatar.name}</span></h2>
           
-          <div className="avatar-container my-8 animate-float">
+          <div className="avatar-container my-8 animate-float relative">
+            <div className="absolute inset-0 bg-green-200/20 blur-3xl rounded-full scale-150 -z-10"></div>
             <img 
               src={avatar.img} 
               alt={avatar.name} 
-=======
-            <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">Nivel 1</span>
-          </div>
-          
-          <h2 className="text-xl font-bold text-green-900 mb-2">Tu Avatar: <span className="text-green-600">{avatarLevel}</span></h2>
-          
-          <div className="avatar-container my-8 animate-float">
-            <img 
-              src="/seed_avatar.png" 
-              alt="Avatar Semilla" 
->>>>>>> 8417200 (Initial commit: EcoPunto foundation with React, Tailwind, and Supabase config)
-              className="w-full h-full object-contain p-2"
+              className="w-full h-full object-contain p-2 drop-shadow-2xl"
             />
           </div>
 
-          <div className="w-full bg-green-100 h-4 rounded-full overflow-hidden mb-2">
-<<<<<<< HEAD
+          <div className="w-full bg-green-100 h-4 rounded-full overflow-hidden mb-2 shadow-inner border border-green-50">
             <div 
-              className="bg-green-500 h-full transition-all duration-1000" 
-              style={{ width: `${points}%` }}
+              className="bg-gradient-to-r from-green-400 to-emerald-600 h-full transition-all duration-1000 ease-out" 
+              style={{ width: `${points % 25 * 4 || (points > 0 ? 100 : 0)}%` }}
             ></div>
           </div>
           
           <div className="flex justify-between items-center px-2 mb-4">
             <div className="flex items-center gap-1 group cursor-help" title="Días seguidos cuidando el planeta">
               <span className="text-xl">🔥</span>
-              <span className="text-sm font-black text-orange-600">Racha: {streak}</span>
+              <span className="text-sm font-black text-orange-600 tracking-tight">Racha: {streak}</span>
             </div>
-            <div 
-              className={`flex items-center gap-1 cursor-pointer transition-opacity ${recoveries === 0 ? 'opacity-30' : 'opacity-100'}`}
-              onClick={useRecovery}
-              title="Escudos de recuperación (clic para gastar uno)"
-            >
+            <div className="flex items-center gap-1 cursor-help opacity-100" title="Escudos de recuperación">
               <span className="text-xl">🛡️</span>
-              <span className="text-sm font-black text-blue-600">Escudos: {recoveries}/3</span>
+              <span className="text-sm font-black text-blue-600 tracking-tight">Escudos: {recoveries}/3</span>
             </div>
           </div>
 
-          <p className="text-sm text-green-600 font-medium italic">
-            {points < 100 ? `¡Faltan ${25 - (points % 25 === 0 && points !== 0 ? 25 : points % 25)} pts para evolucionar!` : '¡Has alcanzado el máximo nivel!'}
+          <p className="text-sm text-green-600 font-bold italic bg-green-50 py-2 rounded-2xl border border-green-100 px-4 inline-block">
+             {points < 100 
+               ? `¡Faltan ${25 - (points % 25 === 0 && points !== 0 ? 25 : points % 25)} pts para evolucionar!` 
+               : '¡Has alcanzado el máximo nivel, protector planetario! 🏆'}
           </p>
-=======
-            <div className="bg-green-500 h-full w-[10%] transition-all duration-1000"></div>
-          </div>
-          <p className="text-sm text-green-600 font-medium italic">¡Sube tu primera foto para ver cómo crezco!</p>
->>>>>>> 8417200 (Initial commit: EcoPunto foundation with React, Tailwind, and Supabase config)
         </section>
 
         {/* Action Buttons */}
         <section className="grid grid-cols-1 gap-4">
-<<<<<<< HEAD
-          <button className="btn-primary w-full text-lg" onClick={addPoints}>
-=======
-          <button className="btn-primary w-full text-lg">
->>>>>>> 8417200 (Initial commit: EcoPunto foundation with React, Tailwind, and Supabase config)
-            <span className="text-2xl">📸</span>
-            Registrar Acción
+          <button 
+            className="btn-primary w-full text-lg py-5 relative overflow-hidden active:scale-95 transition-transform" 
+            onClick={() => setShowUpload(true)}
+          >
+            <div className="absolute inset-0 bg-white/10 translate-y-full hover:translate-y-0 transition-transform duration-300"></div>
+            <span className="text-3xl animate-bounce-subtle">📸</span>
+            <span className="font-extrabold tracking-wide">Registrar Acción</span>
           </button>
           
           <div className="grid grid-cols-2 gap-4">
-            <button className="bg-white p-4 rounded-3xl shadow-md border border-green-500 text-green-600 font-bold hover:bg-green-50 transition-colors">
-              🏆 Ranking
+            <button 
+              onClick={() => setCurrentView('ranking')}
+              className="bg-white p-5 rounded-[2rem] shadow-xl shadow-green-900/5 border-2 border-green-100 text-green-600 font-black hover:bg-green-50 hover:border-green-300 transition-all active:scale-95 flex flex-col items-center gap-2"
+            >
+              <span className="text-2xl">🏆</span>
+              <span className="text-xs uppercase tracking-tighter">Ranking</span>
             </button>
-            <button className="bg-white p-4 rounded-3xl shadow-md border border-green-500 text-green-600 font-bold hover:bg-green-50 transition-colors">
-              👤 Mi Perfil
+            <button 
+              onClick={() => setCurrentView('profile')}
+              className="bg-white p-5 rounded-[2rem] shadow-xl shadow-green-900/5 border-2 border-green-100 text-green-600 font-black hover:bg-green-50 hover:border-green-300 transition-all active:scale-95 flex flex-col items-center gap-2"
+            >
+              <span className="text-2xl">👤</span>
+              <span className="text-xs uppercase tracking-tighter">Mi Perfil</span>
             </button>
           </div>
         </section>
 
-        {/* Recent Activity */}
-        <section className="space-y-4">
-          <h3 className="text-lg font-black text-green-900">Actividad Reciente</h3>
-          <div className="space-y-3">
-            <div className="bg-white/50 p-4 rounded-2xl border border-green-50 border-dashed text-center text-green-400 py-8">
-              <p>Aún no has registrado acciones.</p>
-              <p className="text-xs">¡Empieza hoy a cuidar tu planeta! 🌍</p>
-            </div>
-          </div>
+        {/* Quick Tips Section */}
+        <section className="bg-gradient-to-br from-blue-600 to-indigo-700 p-6 rounded-[2.5rem] shadow-xl text-white relative overflow-hidden">
+          <div className="absolute -top-10 -right-10 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
+          <h3 className="text-lg font-black mb-3 flex items-center gap-2"> 💡 Eco-Tip del día</h3>
+          <p className="text-blue-50 font-medium leading-relaxed">
+            ¿Sabías que reciclar una sola botella de plástico ahorra suficiente energía para encender una bombilla de 60W por 6 horas? ¡Cada acción cuenta!
+          </p>
         </section>
       </main>
+    );
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-[#f0fdf4] flex items-center justify-center">
+        <div className="animate-spin text-5xl">🌿</div>
+      </div>
+    );
+  }
+
+  if (isAdminView && user?.isAdmin) {
+    return <AdminDashboard onBack={() => setIsAdminView(false)} />;
+  }
+
+  if (!user) {
+    return <Register onRegister={() => checkSession()} />;
+  }
+
+  return (
+    <div className="min-h-screen bg-[#f7fdf9] flex flex-col items-center p-4">
+      {/* Header */}
+      <header className="w-full max-w-md flex justify-between items-center py-6">
+        <div className="flex flex-col">
+          <div className="flex items-center gap-2">
+            {logo ? (
+              <img src={logo} alt="Logo" className="w-10 h-10 object-contain rounded-xl shadow-md border border-white" />
+            ) : (
+              <div className="w-10 h-10 bg-green-500 rounded-xl flex items-center justify-center text-white text-2xl shadow-md">🌿</div>
+            )}
+            <h1 className="text-2xl font-black text-green-900 tracking-tight">EcoPunto</h1>
+          </div>
+          <p className="text-sm font-bold text-green-600 ml-1">Hola, {user?.name.split(' ')[0]} 👋</p>
+        </div>
+        <div className="flex flex-col items-end gap-2">
+          <div className="bg-white px-5 py-2.5 rounded-2xl shadow-xl shadow-green-900/5 border border-green-100 flex items-center gap-2 transform transition-all hover:scale-105">
+            <span className="text-yellow-500 text-xl font-bold">⭐</span>
+            <span className="font-black text-green-900 text-lg tracking-tight">{points} <span className="text-[10px] uppercase text-green-500">pts</span></span>
+          </div>
+        </div>
+      </header>
+
+      {renderContent()}
 
       {/* Navigation Bar (Mobile) */}
-      <footer className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-md bg-white/80 backdrop-blur-xl p-4 rounded-full shadow-2xl border border-white/20 flex justify-between items-center px-8">
-        <div className="text-green-600 text-2xl cursor-pointer">🏠</div>
-        <div className="text-green-300 text-2xl cursor-pointer">📊</div>
-        <div className="text-green-300 text-2xl cursor-pointer">📝</div>
-<<<<<<< HEAD
+      <footer className="fixed bottom-6 left-1/2 -translate-x-1/2 w-[90%] max-w-md bg-white/90 backdrop-blur-2xl p-4 rounded-[2.5rem] shadow-2xl shadow-green-900/20 border border-white/50 flex justify-between items-center px-10 z-40">
         <div 
-          className="text-green-300 hover:text-green-600 text-2xl cursor-pointer transition-colors"
-          onClick={() => setIsAdminView(true)}
-          title="Panel Admin"
+          onClick={() => { setCurrentView('home'); setIsAdminView(false); }}
+          className={`text-2xl cursor-pointer transition-all p-2 rounded-2xl ${currentView === 'home' && !isAdminView ? 'bg-green-100 text-green-600 scale-110 shadow-inner' : 'text-green-300 hover:text-green-500'}`}
         >
-          ⚙️
+          🏠
         </div>
-=======
-        <div className="text-green-300 text-2xl cursor-pointer">⚙️</div>
->>>>>>> 8417200 (Initial commit: EcoPunto foundation with React, Tailwind, and Supabase config)
+        <div 
+          onClick={() => { setCurrentView('ranking'); setIsAdminView(false); }}
+          className={`text-2xl cursor-pointer transition-all p-2 rounded-2xl ${currentView === 'ranking' ? 'bg-green-100 text-green-600 scale-110 shadow-inner' : 'text-green-300 hover:text-green-500'}`}
+        >
+          📊
+        </div>
+        <div 
+          onClick={() => { setCurrentView('profile'); setIsAdminView(false); }}
+          className={`text-2xl cursor-pointer transition-all p-2 rounded-2xl ${currentView === 'profile' ? 'bg-green-100 text-green-600 scale-110 shadow-inner' : 'text-green-300 hover:text-green-500'}`}
+        >
+          📝
+        </div>
+        {user?.isAdmin && (
+          <div 
+            onClick={() => setIsAdminView(true)}
+            className={`text-2xl cursor-pointer transition-all p-2 rounded-2xl ${isAdminView ? 'bg-slate-100 text-slate-800 scale-110 shadow-inner' : 'text-green-300 hover:text-slate-500'}`}
+            title="Panel Admin"
+          >
+            ⚙️
+          </div>
+        )}
       </footer>
+
+      {/* Modals */}
+      {showUpload && (
+        <div className="fixed inset-0 bg-green-950/40 backdrop-blur-md z-50 flex items-center justify-center p-4 animate-in fade-in duration-300">
+          <div className="w-full max-w-md animate-in slide-in-from-bottom duration-500">
+            <PhotoUpload 
+              user={user} 
+              onComplete={handleActionComplete} 
+              onCancel={() => setShowUpload(false)} 
+            />
+          </div>
+        </div>
+      )}
     </div>
   );
 }
