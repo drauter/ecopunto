@@ -17,37 +17,41 @@ function Register({ onRegister }) {
     setLoading(true);
     setError(null);
 
+    // Aumentamos a 45s para soportar mejor redes móviles inestables
     const timeoutId = setTimeout(() => {
-      setError("La conexión está tardando demasiado. Revisa tu conexión.");
-      setLoading(false);
-    }, 15000);
+      if (loading) {
+        setError("La conexión está tardando más de lo esperado. Por favor, intenta de nuevo o revisa tu señal.");
+        setLoading(false);
+      }
+    }, 45000);
 
     try {
       if (isLogin) {
         const { error: loginError } = await supabase.auth.signInWithPassword({
-          email: formData.email,
+          email: formData.email.trim(),
           password: formData.password
         });
         if (loginError) throw loginError;
       } else {
         const { data: authData, error: signUpError } = await supabase.auth.signUp({
-          email: formData.email,
+          email: formData.email.trim(),
           password: formData.password,
           options: {
             data: {
-              full_name: formData.name,
+              full_name: formData.name.trim(),
               course: formData.course
             }
           }
         });
         if (signUpError) throw signUpError;
+        if (!authData?.user) throw new Error("No se pudo completar el registro.");
 
         const { error: profileError } = await supabase
           .from('profiles')
           .insert([
             {
               id: authData.user.id,
-              full_name: formData.name,
+              full_name: formData.name.trim(),
               course: formData.course,
               points: 0,
               is_admin: formData.course === 'Docente'
@@ -55,11 +59,24 @@ function Register({ onRegister }) {
           ]);
         if (profileError) throw profileError;
       }
+      
+      // Limpiamos el timeout ANTES de llamar a onRegister para evitar doble mensaje
+      clearTimeout(timeoutId);
       onRegister();
     } catch (err) {
-      setError(err.message || "Ocurrió un error inesperado.");
-    } finally {
       clearTimeout(timeoutId);
+      console.error("Auth error:", err);
+      // Errores comunes de Supabase Auth
+      if (err.message?.includes("Invalid login credentials")) {
+        setError("Correo o contraseña incorrectos. Por favor verifica.");
+      } else if (err.message?.includes("User already registered")) {
+        setError("Este correo ya está registrado. Prueba a iniciar sesión.");
+      } else {
+        setError(err.message || "Ocurrió un error inesperado al conectar con el servidor.");
+      }
+    } finally {
+      // No hacemos setLoading(false) aquí si ya se llamó a onRegister() 
+      // pero por seguridad lo dejamos para casos de error
       setLoading(false);
     }
   };
