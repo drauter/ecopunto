@@ -28,8 +28,9 @@ export async function validateCleanup(imageBlob) {
     REGLAS DE VALIDACIÓN:
     1. El objetivo principal debe ser la LIMPIEZA o el CUIDADO del medio ambiente.
     2. Si la foto NO muestra basura siendo recogida, depositada en un tacho, o un área claramente siendo limpiada, setea "is_valid": false.
-    3. Fotos de personas simplemente posando sin hacer nada, selfies sin contexto ambiental, o fotos de objetos aleatorios (comida, ropa, folletos de publicidad, capturas de pantalla) deben ser RECHAZADAS ("is_valid": false).
-    4. Si es válida, otorga 1 punto por acciones normales y 2 puntos solo si el impacto es grande (mucha basura recogida o limpieza de un área grande).
+    3. DETECCIÓN DE FRAUDE: Rechaza fotos que parezcan repetidas (misma escena en diferente ángulo), fotos de pantallas, o fotos "staged" (basura colocada a propósito para la foto sin limpiar realmente). Si sospechas fraude, "is_valid": false.
+    4. Fotos de personas simplemente posando sin hacer nada, selfies sin contexto ambiental, o fotos de objetos aleatorios (comida, ropa, folletos de publicidad) deben ser RECHAZADAS ("is_valid": false).
+    5. Si es válida, otorga 1 punto por acciones normales y 2 puntos solo si el impacto es grande (mucha basura recogida o limpieza de un área grande).
 
     Responde ÚNICAMENTE en este formato JSON puro:
     {

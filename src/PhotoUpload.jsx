@@ -57,21 +57,42 @@ function PhotoUpload({ user, onUploadComplete, onCancel }) {
 
       if (activityError) throw activityError;
 
-      // 4. Si es válida, actualizar puntos en el perfil
+      // 4. Si es válida, actualizar puntos y racha en el perfil
       if (pointsEarned > 0) {
-        // Obtenemos puntos actuales para el cálculo de racha/nivel
-        const { data: profile } = await supabase.from('profiles').select('points, streak').eq('id', user.id).single();
-        const newPoints = Math.min((profile.points || 0) + pointsEarned, 100);
+        // Obtenemos puntos actuales y última fecha para el cálculo de racha
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('points, streak, last_action_at')
+          .eq('id', user.id)
+          .single();
+
+        const now = new Date();
+        const today = now.toISOString().split('T')[0];
+        const lastActionDate = profile.last_action_at ? new Date(profile.last_action_at).toISOString().split('T')[0] : null;
         
         let newStreak = profile.streak || 1;
-        // Si sube de nivel (25 pts), bono de racha
-        if (Math.floor(newPoints / 25) > Math.floor(profile.points / 25)) {
-          newStreak += 1;
+        
+        if (lastActionDate) {
+          const yesterday = new Date(now);
+          yesterday.setDate(now.getDate() - 1);
+          const yesterdayStr = yesterday.toISOString().split('T')[0];
+
+          if (lastActionDate === yesterdayStr) {
+            // Racha incrementa (vino ayer)
+            newStreak += 1;
+          } else if (lastActionDate !== today) {
+            // Racha se pierde (no vino ayer y no es hoy)
+            newStreak = 1;
+          }
+          // Si lastActionDate === today, no sumamos racha pero sí puntos (ya sumó racha hoy)
         }
 
+        const newPoints = Math.min((profile.points || 0) + pointsEarned, 100);
+        
         await supabase.from('profiles').update({ 
           points: newPoints, 
-          streak: newStreak 
+          streak: newStreak,
+          last_action_at: now.toISOString()
         }).eq('id', user.id);
       }
 
