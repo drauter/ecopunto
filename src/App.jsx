@@ -42,12 +42,19 @@ function App() {
   useEffect(() => {
     // 1. Verificar si hay una sesión activa al cargar
     const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        await fetchProfile(session.user.id);
+      try {
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        if (sessionError) throw sessionError;
+        
+        if (session) {
+          await fetchProfile(session.user.id);
+        }
+        await fetchSettings(); // Ahora lo esperamos para asegurar que se cargue el branding
+      } catch (error) {
+        console.error("Error al inicializar sesión o cargar ajustes:", error);
+      } finally {
+        setLoading(false);
       }
-      fetchSettings(); // Cargar logo global
-      setLoading(false);
     };
 
     const fetchSettings = async () => {

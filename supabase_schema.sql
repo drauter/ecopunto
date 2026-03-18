@@ -10,8 +10,10 @@ create table profiles (
   points integer default 0,
   level integer default 1,
   avatar_state text default 'Semilla',
+  is_admin boolean default false,
   updated_at timestamp with time zone default timezone('utc'::text, now())
 );
+
 
 -- 2. Registro de Acciones Ecológicas
 create table activities (
