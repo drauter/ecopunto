@@ -96,8 +96,8 @@ function AdminDashboard({ onBack }) {
               </div>
             </div>
 
-            <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden mb-10">
-              <table className="w-full text-left border-collapse">
+            <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-x-auto mb-10">
+              <table className="w-full text-left border-collapse min-w-[600px]">
                 <thead>
                   <tr className="bg-slate-50 border-b border-slate-100">
                     <th className="p-4 font-bold text-slate-600 uppercase text-xs">Integrante</th>
@@ -111,23 +111,25 @@ function AdminDashboard({ onBack }) {
                     <tr key={student.id} className="border-b border-slate-50 hover:bg-slate-50 transition-colors">
                       <td className="p-4">
                         <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center text-green-600 font-black overflow-hidden border border-green-50">
+                          <div className="w-10 h-10 bg-green-100 rounded-full flex-shrink-0 flex items-center justify-center text-green-600 font-black overflow-hidden border border-green-50">
                             {student.avatar_url ? (
                               <img src={student.avatar_url} className="w-full h-full object-cover" />
                             ) : (
                               student.full_name?.charAt(0) || '?'
                             )}
                           </div>
-                          <div>
-                            <span className="font-bold text-slate-800 block">{student.full_name}</span>
-                            <span className="text-[10px] text-slate-400 font-mono tracking-tighter">{student.id}</span>
+                          <div className="min-w-0">
+                            <span className="font-bold text-slate-800 block truncate max-w-[150px] md:max-w-none">{student.full_name}</span>
+                            <span className="text-[9px] text-slate-400 font-mono tracking-tighter block truncate max-w-[100px]" title={student.id}>
+                              {student.id}
+                            </span>
                           </div>
                         </div>
                       </td>
-                      <td className="p-4 text-slate-600 font-medium">{student.course}</td>
+                      <td className="p-4 text-slate-600 font-medium whitespace-nowrap">{student.course}</td>
                       <td className="p-4 text-right">
-                        <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full font-black text-sm">
-                          {student.points || 0}
+                        <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full font-black text-sm whitespace-nowrap">
+                          {student.points || 0} pts
                         </span>
                       </td>
                       <td className="p-4 text-center">
