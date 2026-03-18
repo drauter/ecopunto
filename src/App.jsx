@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+<<<<<<< HEAD
 import AdminDashboard from './AdminDashboard';
 import Register from './Register';
 
@@ -42,11 +43,18 @@ function App() {
   if (!user) {
     return <Register onRegister={(userData) => setUser(userData)} />;
   }
+=======
+
+function App() {
+  const [points, setPoints] = useState(0);
+  const [avatarLevel, setAvatarLevel] = useState('Semilla');
+>>>>>>> 8417200 (Initial commit: EcoPunto foundation with React, Tailwind, and Supabase config)
 
   return (
     <div className="min-h-screen bg-[#f0fdf4] flex flex-col items-center p-4">
       {/* Header */}
       <header className="w-full max-w-md flex justify-between items-center py-6">
+<<<<<<< HEAD
         <div className="flex flex-col">
           <div className="flex items-center gap-2">
             <div className="w-10 h-10 bg-green-500 rounded-xl flex items-center justify-center text-white text-2xl shadow-md">🌿</div>
@@ -69,6 +77,15 @@ function App() {
               <span className="text-blue-700 font-black text-xs">{recoveries}</span>
             </div>
           </div>
+=======
+        <div className="flex items-center gap-2">
+          <div className="w-10 h-10 bg-green-500 rounded-xl flex items-center justify-center text-white text-2xl shadow-md">🌿</div>
+          <h1 className="text-2xl font-black text-green-900 tracking-tight">EcoPunto</h1>
+        </div>
+        <div className="bg-white px-4 py-2 rounded-2xl shadow-sm border border-green-100 flex items-center gap-2">
+          <span className="text-yellow-500 text-xl font-bold">⭐</span>
+          <span className="font-black text-green-800">{points} pts</span>
+>>>>>>> 8417200 (Initial commit: EcoPunto foundation with React, Tailwind, and Supabase config)
         </div>
       </header>
 
@@ -76,6 +93,7 @@ function App() {
       <main className="w-full max-w-md space-y-8 mt-4">
         <section className="card text-center relative overflow-hidden">
           <div className="absolute top-0 right-0 p-4">
+<<<<<<< HEAD
             <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">Nivel {avatar.level}</span>
           </div>
           
@@ -85,11 +103,23 @@ function App() {
             <img 
               src={avatar.img} 
               alt={avatar.name} 
+=======
+            <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">Nivel 1</span>
+          </div>
+          
+          <h2 className="text-xl font-bold text-green-900 mb-2">Tu Avatar: <span className="text-green-600">{avatarLevel}</span></h2>
+          
+          <div className="avatar-container my-8 animate-float">
+            <img 
+              src="/seed_avatar.png" 
+              alt="Avatar Semilla" 
+>>>>>>> 8417200 (Initial commit: EcoPunto foundation with React, Tailwind, and Supabase config)
               className="w-full h-full object-contain p-2"
             />
           </div>
 
           <div className="w-full bg-green-100 h-4 rounded-full overflow-hidden mb-2">
+<<<<<<< HEAD
             <div 
               className="bg-green-500 h-full transition-all duration-1000" 
               style={{ width: `${points}%` }}
@@ -114,11 +144,20 @@ function App() {
           <p className="text-sm text-green-600 font-medium italic">
             {points < 100 ? `¡Faltan ${25 - (points % 25 === 0 && points !== 0 ? 25 : points % 25)} pts para evolucionar!` : '¡Has alcanzado el máximo nivel!'}
           </p>
+=======
+            <div className="bg-green-500 h-full w-[10%] transition-all duration-1000"></div>
+          </div>
+          <p className="text-sm text-green-600 font-medium italic">¡Sube tu primera foto para ver cómo crezco!</p>
+>>>>>>> 8417200 (Initial commit: EcoPunto foundation with React, Tailwind, and Supabase config)
         </section>
 
         {/* Action Buttons */}
         <section className="grid grid-cols-1 gap-4">
+<<<<<<< HEAD
           <button className="btn-primary w-full text-lg" onClick={addPoints}>
+=======
+          <button className="btn-primary w-full text-lg">
+>>>>>>> 8417200 (Initial commit: EcoPunto foundation with React, Tailwind, and Supabase config)
             <span className="text-2xl">📸</span>
             Registrar Acción
           </button>
@@ -150,6 +189,7 @@ function App() {
         <div className="text-green-600 text-2xl cursor-pointer">🏠</div>
         <div className="text-green-300 text-2xl cursor-pointer">📊</div>
         <div className="text-green-300 text-2xl cursor-pointer">📝</div>
+<<<<<<< HEAD
         <div 
           className="text-green-300 hover:text-green-600 text-2xl cursor-pointer transition-colors"
           onClick={() => setIsAdminView(true)}
@@ -157,6 +197,9 @@ function App() {
         >
           ⚙️
         </div>
+=======
+        <div className="text-green-300 text-2xl cursor-pointer">⚙️</div>
+>>>>>>> 8417200 (Initial commit: EcoPunto foundation with React, Tailwind, and Supabase config)
       </footer>
     </div>
   );

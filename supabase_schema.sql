@@ -56,3 +56,31 @@ create policy "Users can view own activities" on activities
 -- Los estudiantes pueden insertar actividades
 create policy "Users can insert activities" on activities
   for insert with check (auth.uid() = student_id);
+
+-- 4. Configuración Global (Logo, etc)
+create table settings (
+  id integer primary key default 1 check (id = 1), -- Solo una fila
+  logo_url text,
+  app_name text default 'EcoPunto',
+  updated_at timestamp with time zone default timezone('utc'::text, now())
+);
+
+-- Politicas para settings
+alter table settings enable row level security;
+create policy "Settings visible for all" on settings for select using (true);
+create policy "Only admins can update settings" on settings for update 
+  using (exists (select 1 from profiles where profiles.id = auth.uid() and profiles.is_admin = true));
+create policy "Only admins can insert settings" on settings for insert 
+  with check (exists (select 1 from profiles where profiles.id = auth.uid() and profiles.is_admin = true));
+
+-- Insertar configuración inicial
+insert into settings (id, app_name) values (1, 'EcoPunto') on conflict do nothing;
+
+-- 5. Storage policies para settings bucket
+-- El bucket 'settings' debe ser creado en el Dashboard de Supabase
+create policy "Settings bucket visible for all" on storage.objects for select
+  using (bucket_id = 'settings');
+create policy "Admins can upload to settings" on storage.objects for insert
+  with check (bucket_id = 'settings' and exists (
+    select 1 from profiles where profiles.id = auth.uid() and profiles.is_admin = true
+  ));
