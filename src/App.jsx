@@ -42,58 +42,42 @@ function App() {
   useEffect(() => {
     // 1. Verificar si hay una sesión activa al cargar
     const checkSession = async () => {
-      console.log("DEBUG: 1. Iniciando checkSession");
       const timeoutId = setTimeout(() => {
-        console.warn("DEBUG: !!! TIMEOUT GENERAL ALCANZADO (8s)");
         setLoading(false);
-      }, 8000);
+      }, 12000);
 
       try {
-        if (!supabase) {
-          console.error("DEBUG: Supabase cliente no existe");
-          return;
-        }
-
-        console.log("DEBUG: 2. Obteniendo sesión...");
+        if (!supabase) return;
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
-        if (sessionError) {
-          console.error("DEBUG: Error en getSession:", sessionError);
-          throw sessionError;
-        }
+        if (sessionError) throw sessionError;
         
         if (session) {
-          console.log("DEBUG: 3. Sesión encontrada para:", session.user.email);
           await fetchProfile(session.user.id);
-        } else {
-          console.log("DEBUG: 3. No hay sesión activa");
         }
-        
-        console.log("DEBUG: 4. Cargando ajustes...");
         await fetchSettings();
       } catch (error) {
-        console.error("DEBUG: !!! ERROR CAPTURADO EN checkSession:", error);
+        console.error("Error en inicialización:", error);
       } finally {
         clearTimeout(timeoutId);
         setLoading(false);
-        console.log("DEBUG: 5. checkSession finalizado (loading: false)");
       }
     };
 
     const fetchSettings = async () => {
       try {
-        console.log("DEBUG: fetchSettings: Iniciando query...");
-        const { data, error } = await supabase.from('settings').select('*').eq('id', 1).single();
-        if (error) {
-          console.warn("DEBUG: fetchSettings: Error o tabla vacía:", error.message);
-        } else if (data?.logo_url) {
-          console.log("DEBUG: fetchSettings: Logo cargado:", data.logo_url);
+        // Ponemos un límite de 3 segundos a la respuesta de base de datos
+        const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject('timeout'), 3000));
+        const queryPromise = supabase.from('settings').select('*').eq('id', 1).single();
+        
+        const result = await Promise.race([queryPromise, timeoutPromise]);
+        const { data, error } = result;
+
+        if (!error && data?.logo_url) {
           setLogo(data.logo_url);
           updateFavicon(data.logo_url);
-        } else {
-          console.log("DEBUG: fetchSettings: No hay logo configurado");
         }
       } catch (err) {
-        console.error("DEBUG: fetchSettings: Excepción:", err);
+        console.warn("No se pudieron cargar los ajustes (usando valores por defecto):", err);
       }
     };
 
@@ -141,32 +125,31 @@ function App() {
 
   const fetchProfile = async (userId) => {
     try {
-      console.log("DEBUG: fetchProfile: Consultando perfil para ID:", userId);
-      const { data, error } = await supabase
-        .from('profiles')
-        .select('*')
-        .eq('id', userId)
-        .single();
+      const timeoutPromise = new Promise((_, reject) => setTimeout(() => reject('timeout'), 4000));
+      const queryPromise = supabase.from('profiles').select('*').eq('id', userId).single();
       
-      if (error) {
-        console.error("DEBUG: fetchProfile: Error de Supabase:", error);
+      const result = await Promise.race([queryPromise, timeoutPromise]);
+      const { data, error } = result;
+      
+      if (error || !data) {
+        // SI falla el perfil, entramos como invitado/estudiante genérico
+        setUser({ id: userId, name: 'Usuario Eco', course: 'General', isAdmin: false });
+        setPoints(0);
         return;
       }
 
-      if (data) {
-        console.log("DEBUG: fetchProfile: Perfil encontrado!", data.full_name);
-        setUser({
-          id: data.id,
-          name: data.full_name || 'Estudiante',
-          course: data.course || 'Global',
-          isAdmin: data.is_admin || false
-        });
-        setPoints(data.points || 0);
-      } else {
-        console.warn("DEBUG: fetchProfile: No se encontró fila en 'profiles'");
-      }
+      setUser({
+        id: data.id,
+        name: data.full_name || 'Estudiante',
+        course: data.course || 'Global',
+        isAdmin: data.is_admin || false
+      });
+      setPoints(data.points || 0);
     } catch (err) {
-      console.error("DEBUG: fetchProfile: Excepción fatal:", err);
+      console.warn("Carga de perfil fallida o lenta, usando modo invitado:", err);
+      if (!user) {
+        setUser({ id: userId, name: 'Estudiante', course: 'Global', isAdmin: false });
+      }
     }
   };
 
