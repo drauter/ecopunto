@@ -28,8 +28,9 @@ function Profile({ user }) {
   };
 
   return (
-    <div className="w-full max-w-md space-y-8 pb-24">
-      <div className="text-center py-4">
+    <div className="w-full max-w-5xl space-y-8 pb-24 px-4">
+      <div className="text-center py-4 bg-white rounded-[3rem] shadow-sm border border-green-50 max-w-md mx-auto relative overflow-hidden">
+        <div className="absolute top-0 left-0 w-full h-2 bg-gradient-to-r from-green-400 to-emerald-500"></div>
         <div className="w-24 h-24 bg-green-500 rounded-3xl mx-auto flex items-center justify-center text-white text-5xl shadow-xl mb-4 border-4 border-white">
           {user?.name?.charAt(0) || '👤'}
         </div>
@@ -38,27 +39,27 @@ function Profile({ user }) {
         
         <button 
           onClick={handleLogout}
-          className="mt-4 text-red-500 font-bold text-sm bg-red-50 px-4 py-2 rounded-full hover:bg-red-100 transition-colors"
+          className="mt-4 text-red-500 font-bold text-sm bg-red-50 px-4 py-2 rounded-full hover:bg-red-500 hover:text-white transition-all"
         >
           Cerrar Sesión 🚪
         </button>
       </div>
 
-      <div className="space-y-4">
-        <h3 className="text-lg font-black text-green-900 flex items-center gap-2">
-          📜 Tu Historial
-          <span className="bg-green-100 text-green-600 text-[10px] px-2 py-0.5 rounded-full">{activities.length}</span>
+      <div className="space-y-6">
+        <h3 className="text-2xl font-black text-green-900 flex items-center gap-3">
+          📜 Tu Historial Ecológico
+          <span className="bg-green-100 text-green-600 text-sm px-3 py-1 rounded-full">{activities.length}</span>
         </h3>
 
         {loading ? (
-          <div className="text-center py-10 text-green-400 font-bold animate-pulse">Cargando historial... 🌿</div>
+          <div className="text-center py-10 text-green-400 font-bold animate-pulse text-xl">Cargando historial... 🌿</div>
         ) : activities.length === 0 ? (
-          <div className="bg-white/50 p-8 rounded-3xl border border-green-50 border-dashed text-center text-green-400">
-            <p className="font-bold">Aún no hay registros.</p>
-            <p className="text-xs uppercase mt-2">¡Sube tu primera foto para ganar puntos! 📸</p>
+          <div className="bg-white p-12 rounded-[3rem] border-2 border-green-50 border-dashed text-center text-green-400">
+            <p className="font-bold text-lg">Aún no hay registros.</p>
+            <p className="text-sm uppercase mt-2">¡Sube tu primera foto para ganar puntos! 📸</p>
           </div>
         ) : (
-          <div className="grid gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {activities.map((act) => (
               <div key={act.id} className="bg-white p-4 rounded-3xl shadow-sm border border-green-50 flex items-center gap-4">
                 <div className="w-16 h-16 rounded-2xl overflow-hidden bg-green-100 flex-shrink-0">

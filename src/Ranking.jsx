@@ -23,7 +23,7 @@ function Ranking() {
   }, []);
 
   return (
-    <div className="w-full max-w-md space-y-6 pb-24">
+    <div className="w-full max-w-4xl space-y-6 pb-24">
       <div className="text-center">
         <h2 className="text-2xl font-black text-green-900">🏆 Salón de la Fama</h2>
         <p className="text-sm text-green-600 font-bold">Los mejores cuidadores de la escuela</p>

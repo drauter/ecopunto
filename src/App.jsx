@@ -175,9 +175,10 @@ function App() {
     
     // Default: Home View
     return (
-      <main className="w-full max-w-md space-y-8 mt-4">
-        {/* Main Avatar Card */}
-        <section className="card text-center relative overflow-hidden group">
+      <main className="w-full max-w-5xl space-y-8 mt-4 px-4 overflow-visible">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+          {/* Main Avatar Card */}
+          <section className="card text-center relative overflow-hidden group h-full flex flex-col justify-center py-10">
           <div className="absolute top-0 right-0 p-4">
             <span className="bg-green-100 text-green-700 px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider shadow-sm border border-green-200">
               Nivel {avatar.level}
@@ -213,50 +214,53 @@ function App() {
             </div>
           </div>
 
-          <p className="text-sm text-green-600 font-bold italic bg-green-50 py-2 rounded-2xl border border-green-100 px-4 inline-block">
-             {points < 100 
-               ? `¡Faltan ${25 - (points % 25 === 0 && points !== 0 ? 25 : points % 25)} pts para evolucionar!` 
-               : '¡Has alcanzado el máximo nivel, protector planetario! 🏆'}
-          </p>
-        </section>
+            <p className="text-sm text-green-600 font-bold italic bg-green-50 py-2 rounded-2xl border border-green-100 px-4 inline-block">
+               {points < 100 
+                 ? `¡Faltan ${25 - (points % 25 === 0 && points !== 0 ? 25 : points % 25)} pts para evolucionar!` 
+                 : '¡Has alcanzado el máximo nivel, protector planetario! 🏆'}
+            </p>
+          </section>
 
-        {/* Action Buttons */}
-        <section className="grid grid-cols-1 gap-4">
-          <button 
-            className="btn-primary w-full text-lg py-5 relative overflow-hidden active:scale-95 transition-transform" 
-            onClick={() => setShowUpload(true)}
-          >
-            <div className="absolute inset-0 bg-white/10 translate-y-full hover:translate-y-0 transition-transform duration-300"></div>
-            <span className="text-3xl animate-bounce-subtle">📸</span>
-            <span className="font-extrabold tracking-wide">Registrar Acción</span>
-          </button>
-          
-          <div className="grid grid-cols-2 gap-4">
-            <button 
-              onClick={() => setCurrentView('ranking')}
-              className="bg-white p-5 rounded-[2rem] shadow-xl shadow-green-900/5 border-2 border-green-100 text-green-600 font-black hover:bg-green-50 hover:border-green-300 transition-all active:scale-95 flex flex-col items-center gap-2"
-            >
-              <span className="text-2xl">🏆</span>
-              <span className="text-xs uppercase tracking-tighter">Ranking</span>
-            </button>
-            <button 
-              onClick={() => setCurrentView('profile')}
-              className="bg-white p-5 rounded-[2rem] shadow-xl shadow-green-900/5 border-2 border-green-100 text-green-600 font-black hover:bg-green-50 hover:border-green-300 transition-all active:scale-95 flex flex-col items-center gap-2"
-            >
-              <span className="text-2xl">👤</span>
-              <span className="text-xs uppercase tracking-tighter">Mi Perfil</span>
-            </button>
+          <div className="space-y-6">
+            {/* Quick Tips Section (Ahora al lado en desktop) */}
+            <section className="bg-gradient-to-br from-blue-600 to-indigo-700 p-8 rounded-[2.5rem] shadow-xl text-white relative overflow-hidden">
+              <div className="absolute -top-10 -right-10 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
+              <h3 className="text-xl font-black mb-3 flex items-center gap-2"> 💡 Eco-Tip del día</h3>
+              <p className="text-blue-50 font-medium leading-relaxed text-lg">
+                ¿Sabías que reciclar una sola botella de plástico ahorra suficiente energía para encender una bombilla de 60W por 6 horas? ¡Cada acción cuenta!
+              </p>
+            </section>
+
+            {/* Action Buttons */}
+            <section className="grid grid-cols-1 gap-4">
+              <button 
+                className="btn-primary w-full text-xl py-6 relative overflow-hidden active:scale-95 transition-transform shadow-green-200 shadow-2xl" 
+                onClick={() => setShowUpload(true)}
+              >
+                <div className="absolute inset-0 bg-white/10 translate-y-full hover:translate-y-0 transition-transform duration-300"></div>
+                <span className="text-4xl animate-bounce-subtle">📸</span>
+                <span className="font-extrabold tracking-wide ml-2">Registrar Acción Ecológica</span>
+              </button>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <button 
+                  onClick={() => setCurrentView('ranking')}
+                  className="bg-white p-6 rounded-[2rem] shadow-xl shadow-green-900/5 border-2 border-green-100 text-green-600 font-black hover:bg-green-50 hover:border-green-300 transition-all active:scale-95 flex flex-col items-center gap-2 group"
+                >
+                  <span className="text-3xl group-hover:scale-125 transition-transform">🏆</span>
+                  <span className="text-sm uppercase tracking-tighter">Ranking Global</span>
+                </button>
+                <button 
+                  onClick={() => setCurrentView('profile')}
+                  className="bg-white p-6 rounded-[2rem] shadow-xl shadow-green-900/5 border-2 border-green-100 text-green-600 font-black hover:bg-green-50 hover:border-green-300 transition-all active:scale-95 flex flex-col items-center gap-2 group"
+                >
+                  <span className="text-3xl group-hover:scale-125 transition-transform">👤</span>
+                  <span className="text-sm uppercase tracking-tighter">Mi Perfil</span>
+                </button>
+              </div>
+            </section>
           </div>
-        </section>
-
-        {/* Quick Tips Section */}
-        <section className="bg-gradient-to-br from-blue-600 to-indigo-700 p-6 rounded-[2.5rem] shadow-xl text-white relative overflow-hidden">
-          <div className="absolute -top-10 -right-10 w-32 h-32 bg-white/10 rounded-full blur-2xl"></div>
-          <h3 className="text-lg font-black mb-3 flex items-center gap-2"> 💡 Eco-Tip del día</h3>
-          <p className="text-blue-50 font-medium leading-relaxed">
-            ¿Sabías que reciclar una sola botella de plástico ahorra suficiente energía para encender una bombilla de 60W por 6 horas? ¡Cada acción cuenta!
-          </p>
-        </section>
+        </div>
       </main>
     );
   };
@@ -280,7 +284,7 @@ function App() {
   return (
     <div className="min-h-screen bg-[#f7fdf9] flex flex-col items-center p-4">
       {/* Header */}
-      <header className="w-full max-w-md flex justify-between items-center py-6">
+      <header className="w-full max-w-5xl flex justify-between items-center py-8">
         <div className="flex flex-col">
           <div className="flex items-center gap-2">
             {logo ? (
