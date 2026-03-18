@@ -339,7 +339,7 @@ function App() {
           <div className="w-full max-w-md animate-in slide-in-from-bottom duration-500">
             <PhotoUpload 
               user={user} 
-              onComplete={handleActionComplete} 
+              onUploadComplete={handleActionComplete} 
               onCancel={() => setShowUpload(false)} 
             />
           </div>
