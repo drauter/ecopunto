@@ -42,24 +42,45 @@ function App() {
   }, []);
 
   useEffect(() => {
-    // Optimización: Carga paralela de sesión y ajustes
-    const initApp = async () => {
+    // 1. Unificación de inicialización para evitar conflictos de locks web (AbortError)
+    const initFullApp = async () => {
       const timeoutId = setTimeout(() => {
         setLoading(false);
-      }, 4000); 
+      }, 4500); 
 
       try {
         if (!supabase) return;
 
-        // Settings es independiente del usuario, lo cargamos primero
+        // A) Primero aseguramos la sesión (Priming del lock de Supabase)
+        // Esto evita que fetchSettings compita por el mismo lock de almacenamiento
+        try {
+          await supabase.auth.getSession();
+        } catch (authError) {
+          if (authError.name !== 'AbortError') {
+            console.error("Auth session error:", authError);
+          }
+        }
+
+        // B) Luego cargamos los ajustes de la base de datos
         await fetchSettings();
         
-        // El estado de sesión lo manejará onAuthStateChange al iniciar
+        // C) Finalmente nos suscribimos a los cambios de estado (Auth listener)
+        const { data } = supabase.auth.onAuthStateChange(async (_event, session) => {
+          if (session) {
+            await fetchProfile(session.user.id);
+          } else {
+            setUser(null);
+            setLoading(false);
+          }
+        });
+        subscription = data.subscription;
+
       } catch (error) {
-        console.error("Error en inicialización:", error);
+        if (error.name !== 'AbortError') {
+          console.error("Error en inicialización:", error);
+        }
       } finally {
         clearTimeout(timeoutId);
-        // El cargador se quitará cuando onAuthStateChange termine de procesar el perfil inicial
       }
     };
 
@@ -71,40 +92,26 @@ function App() {
           updateFavicon(data.logo_url);
         }
       } catch (err) {
-        console.warn("Ajustes ignorados por lentitud:", err);
+        if (err.name !== 'AbortError') {
+          console.warn("Ajustes ignorados:", err);
+        }
       }
     };
 
     const updateFavicon = (url) => {
-      const links = [
-        { rel: "icon", href: url },
-        { rel: "apple-touch-icon", href: url }
-      ];
+      const links = [{ rel: "icon", href: url }, { rel: "apple-touch-icon", href: url }];
       links.forEach(({ rel, href }) => {
         let link = document.querySelector(`link[rel~='${rel}']`);
         if (!link) {
-          link = document.createElement('link');
-          link.rel = rel;
+          link = document.createElement('link'); link.rel = rel;
           document.head.appendChild(link);
         }
         link.href = href;
       });
     };
 
-    initApp();
-
     let subscription;
-    if (supabase?.auth) {
-      const { data } = supabase.auth.onAuthStateChange(async (_event, session) => {
-        if (session) {
-          await fetchProfile(session.user.id);
-        } else {
-          setUser(null);
-          setLoading(false);
-        }
-      });
-      subscription = data.subscription;
-    }
+    initFullApp();
 
     return () => {
       if (subscription) subscription.unsubscribe();
