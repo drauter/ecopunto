@@ -1,19 +1,71 @@
 import React, { useState } from 'react';
+import { supabase } from './supabaseClient';
 
 function Register({ onRegister }) {
+  const [isLogin, setIsLogin] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
     course: '',
     email: '',
-    code: ''
+    password: ''
   });
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (formData.name && formData.course) {
-      onRegister(formData);
+    setLoading(true);
+    setError(null);
+
+    try {
+      if (isLogin) {
+        const { error: loginError } = await supabase.auth.signInWithPassword({
+          email: formData.email,
+          password: formData.password
+        });
+        if (loginError) throw loginError;
+      } else {
+        // Registro
+        const { data: authData, error: signUpError } = await supabase.auth.signUp({
+          email: formData.email,
+          password: formData.password,
+          options: {
+            data: {
+              full_name: formData.name,
+              course: formData.course
+            }
+          }
+        });
+        if (signUpError) throw signUpError;
+
+        // Crear perfil en la tabla 'profiles'
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .insert([
+            {
+              id: authData.user.id,
+              full_name: formData.name,
+              course: formData.course,
+              points: 0,
+              is_admin: formData.course === 'Docente'
+            }
+          ]);
+        if (profileError) throw profileError;
+      }
+      onRegister();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
     }
   };
+
+  const courses = [
+    '4to A', '4to B', '4to C', '4to D',
+    '5to A', '5to B', '5to C', '5to D',
+    '6to A', '6to B', '6to C', '6to D',
+    'Docente'
+  ];
 
   return (
     <div className="min-h-screen bg-[#f0fdf4] flex flex-col items-center justify-center p-6">
@@ -24,60 +76,94 @@ function Register({ onRegister }) {
 
         <div className="text-center mb-8 relative">
           <div className="w-20 h-20 bg-green-500 rounded-3xl flex items-center justify-center text-white text-4xl shadow-lg mx-auto mb-4 animate-float">🌿</div>
-          <h1 className="text-3xl font-black text-green-900 mb-2">¡Bienvenido!</h1>
-          <p className="text-green-600 font-medium">Únete a la misión EcoPunto</p>
+          <h1 className="text-3xl font-black text-green-900 mb-2">
+            {isLogin ? '¡Hola de nuevo!' : '¡Bienvenido!'}
+          </h1>
+          <p className="text-green-600 font-medium">
+            {isLogin ? 'Ingresa a tu cuenta EcoPunto' : 'Únete a la misión EcoPunto'}
+          </p>
         </div>
 
+        {error && (
+          <div className="bg-red-50 border-2 border-red-100 text-red-600 p-4 rounded-2xl mb-6 text-sm font-bold text-center">
+            {error}
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className="space-y-4 relative">
+          {!isLogin && (
+            <>
+              <div>
+                <label className="block text-sm font-bold text-green-800 mb-1 ml-2">Nombre Completo</label>
+                <input 
+                  type="text" 
+                  placeholder="Ej: Mateo González"
+                  className="w-full bg-green-50 border-2 border-green-100 rounded-2xl py-3 px-4 focus:border-green-500 focus:outline-none transition-all text-green-900"
+                  value={formData.name}
+                  onChange={(e) => setFormData({...formData, name: e.target.value})}
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold text-green-800 mb-1 ml-2">Curso / Grado</label>
+                <select 
+                  className="w-full bg-green-50 border-2 border-green-100 rounded-2xl py-3 px-4 focus:border-green-500 focus:outline-none transition-all text-green-900 appearance-none"
+                  value={formData.course}
+                  onChange={(e) => setFormData({...formData, course: e.target.value})}
+                  required
+                >
+                  <option value="">Selecciona tu curso</option>
+                  {courses.map(c => <option key={c} value={c}>{c}</option>)}
+                </select>
+              </div>
+            </>
+          )}
+
           <div>
-            <label className="block text-sm font-bold text-green-800 mb-1 ml-2">Nombre Completo</label>
+            <label className="block text-sm font-bold text-green-800 mb-1 ml-2">Correo Electrónico</label>
             <input 
-              type="text" 
-              placeholder="Ej: Mateo González"
+              type="email" 
+              placeholder="tu@email.com"
               className="w-full bg-green-50 border-2 border-green-100 rounded-2xl py-3 px-4 focus:border-green-500 focus:outline-none transition-all text-green-900"
-              value={formData.name}
-              onChange={(e) => setFormData({...formData, name: e.target.value})}
+              value={formData.email}
+              onChange={(e) => setFormData({...formData, email: e.target.value})}
               required
             />
           </div>
 
           <div>
-            <label className="block text-sm font-bold text-green-800 mb-1 ml-2">Curso / Grado</label>
-            <select 
-              className="w-full bg-green-50 border-2 border-green-100 rounded-2xl py-3 px-4 focus:border-green-500 focus:outline-none transition-all text-green-900 appearance-none"
-              value={formData.course}
-              onChange={(e) => setFormData({...formData, course: e.target.value})}
-              required
-            >
-              <option value="">Selecciona tu curso</option>
-              <option value="5to A">5to A</option>
-              <option value="5to B">5to B</option>
-              <option value="6to A">6to A</option>
-              <option value="6to B">6to B</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-bold text-green-800 mb-1 ml-2">Código de acceso (Opcional)</label>
+            <label className="block text-sm font-bold text-green-800 mb-1 ml-2">Contraseña</label>
             <input 
-              type="text" 
-              placeholder="Código de tu profesor"
+              type="password" 
+              placeholder="••••••••"
               className="w-full bg-green-50 border-2 border-green-100 rounded-2xl py-3 px-4 focus:border-green-500 focus:outline-none transition-all text-green-900"
-              value={formData.code}
-              onChange={(e) => setFormData({...formData, code: e.target.value})}
+              value={formData.password}
+              onChange={(e) => setFormData({...formData, password: e.target.value})}
+              required
             />
           </div>
 
           <button 
             type="submit" 
-            className="w-full btn-primary mt-6 text-lg py-4"
+            disabled={loading}
+            className="w-full btn-primary mt-6 text-lg py-4 disabled:opacity-50"
           >
-            Empezar a Cuidar 🌍
+            {loading ? 'Procesando...' : (isLogin ? 'Entrar 🚀' : 'Empezar a Cuidar 🌍')}
           </button>
         </form>
 
+        <div className="text-center mt-6">
+          <button 
+            onClick={() => setIsLogin(!isLogin)}
+            className="text-green-600 font-bold hover:underline"
+          >
+            {isLogin ? '¿No tienes cuenta? Regístrate' : '¿Ya tienes cuenta? Accede aquí'}
+          </button>
+        </div>
+
         <p className="text-center text-xs text-green-400 mt-8">
-          Al registrarte, te comprometes a cuidar nuestro entorno escolar.
+          Al {isLogin ? 'entrar' : 'registrarte'}, te comprometes a cuidar nuestro entorno escolar.
         </p>
       </div>
     </div>
