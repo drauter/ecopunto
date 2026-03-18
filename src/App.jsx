@@ -42,36 +42,25 @@ function App() {
   useEffect(() => {
     // 1. Verificar si hay una sesión activa al cargar
     const checkSession = async () => {
-      console.log("Iniciando checkSession...");
       const timeoutId = setTimeout(() => {
-        console.warn("Timeout de carga alcanzado. Forzando fin de carga.");
         setLoading(false);
-      }, 5000);
+      }, 8000); // 8 segundos de margen
 
       try {
-        if (!supabase) {
-          console.error("La instancia de Supabase no está definida.");
-          return;
-        }
+        if (!supabase) return;
 
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         if (sessionError) throw sessionError;
         
         if (session) {
-          console.log("Sesión encontrada para el usuario:", session.user.id);
           await fetchProfile(session.user.id);
-        } else {
-          console.log("No hay sesión activa.");
         }
-        
-        console.log("Cargando ajustes globales...");
         await fetchSettings();
       } catch (error) {
-        console.error("Error crítico en inicialización:", error);
+        console.error("Error al inicializar EcoPunto:", error);
       } finally {
         clearTimeout(timeoutId);
         setLoading(false);
-        console.log("Carga finalizada.");
       }
     };
 
@@ -104,12 +93,10 @@ function App() {
 
     checkSession();
 
-    // 2. Escuchar cambios en la autenticación
     let subscription;
     try {
       if (supabase?.auth) {
         const { data } = supabase.auth.onAuthStateChange(async (_event, session) => {
-          console.log("Cambio en estado de auth:", _event);
           if (session) {
             await fetchProfile(session.user.id);
           } else {
@@ -119,7 +106,7 @@ function App() {
         subscription = data.subscription;
       }
     } catch (err) {
-      console.error("Error al suscribirse a cambios de auth:", err);
+      console.error("Error en suscripción de auth:", err);
     }
 
     return () => {
