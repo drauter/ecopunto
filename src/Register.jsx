@@ -17,15 +17,23 @@ function Register({ onRegister }) {
     setLoading(true);
     setError(null);
 
+    const timeoutId = setTimeout(() => {
+      setError("La conexión está tardando demasiado. Por favor, revisa tu conexión o las claves de configuración.");
+      setLoading(false);
+    }, 10000);
+
     try {
+      console.log("Iniciando proceso de " + (isLogin ? "login" : "registro") + "...");
       if (isLogin) {
         const { error: loginError } = await supabase.auth.signInWithPassword({
           email: formData.email,
           password: formData.password
         });
         if (loginError) throw loginError;
+        console.log("Login exitoso");
       } else {
         // Registro
+        console.log("Intentando registro de auth...");
         const { data: authData, error: signUpError } = await supabase.auth.signUp({
           email: formData.email,
           password: formData.password,
@@ -37,6 +45,7 @@ function Register({ onRegister }) {
           }
         });
         if (signUpError) throw signUpError;
+        console.log("Auth de registro exitosa, creando perfil...");
 
         // Crear perfil en la tabla 'profiles'
         const { error: profileError } = await supabase
@@ -51,11 +60,14 @@ function Register({ onRegister }) {
             }
           ]);
         if (profileError) throw profileError;
+        console.log("Perfil creado exitosamente");
       }
       onRegister();
     } catch (err) {
-      setError(err.message);
+      console.error("Error en " + (isLogin ? "login" : "registro") + ":", err);
+      setError(err.message || "Ocurrió un error inesperado.");
     } finally {
+      clearTimeout(timeoutId);
       setLoading(false);
     }
   };
