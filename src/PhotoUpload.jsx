@@ -4,7 +4,7 @@ import { validateCleanup } from './geminiService';
 
 function PhotoUpload({ user, onUploadComplete, onCancel }) {
   const [image, setImage] = useState(null);
-  const [uploading, setUploading] = useState(false);
+  const [uploadStatus, setUploadStatus] = useState('');
   const [preview, setPreview] = useState(null);
   const fileInputRef = useRef(null);
 
@@ -16,19 +16,65 @@ function PhotoUpload({ user, onUploadComplete, onCancel }) {
     }
   };
 
+  const compressImage = (file) => {
+    return new Promise((resolve) => {
+      setUploadStatus('Optimizando imagen...');
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = (event) => {
+        const img = new Image();
+        img.src = event.target.result;
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          
+          const MAX_SIZE = 1200;
+          if (width > height) {
+            if (width > MAX_SIZE) {
+              height *= MAX_SIZE / width;
+              width = MAX_SIZE;
+            }
+          } else {
+            if (height > MAX_SIZE) {
+              width *= MAX_SIZE / height;
+              height = MAX_SIZE;
+            }
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, width, height);
+          
+          canvas.toBlob((blob) => {
+            resolve(new File([blob], file.name, { type: 'image/jpeg' }));
+          }, 'image/jpeg', 0.82);
+        };
+      };
+    });
+  };
+
   const uploadPhoto = async () => {
     if (!image || !user) return;
-    setUploading(true);
+    setUploadStatus('Iniciando...');
 
     try {
-      const fileExt = image.name.split('.').pop();
-      const fileName = `${user.id}/${Math.random()}.${fileExt}`;
+      // 1. Compresión
+      const compressedImage = await compressImage(image);
+      
+      // 2. Subida
+      setUploadStatus('Subiendo a la nube...');
+      const fileExt = 'jpg';
+      const fileName = `${user.id}/${Date.now()}.${fileExt}`;
       const filePath = `${fileName}`;
 
-      // 1. Subir a Supabase Storage (Bucket 'activities')
-      const { data: uploadData, error: uploadError } = await supabase.storage
+      const { error: uploadError } = await supabase.storage
         .from('activities')
-        .upload(filePath, image);
+        .upload(filePath, compressedImage, {
+          contentType: 'image/jpeg',
+          upsert: false
+        });
 
       if (uploadError) throw uploadError;
 
@@ -36,12 +82,14 @@ function PhotoUpload({ user, onUploadComplete, onCancel }) {
         .from('activities')
         .getPublicUrl(filePath);
 
-      // 2. Validar con IA (Gemini)
-      const aiResult = await validateCleanup(image);
+      // 3. IA
+      setUploadStatus('IA Analizando tu acción...');
+      const aiResult = await validateCleanup(compressedImage);
       const pointsEarned = aiResult.is_valid ? aiResult.score : 0;
 
-      // 3. Registrar actividad en la base de datos
-      const { data: activityData, error: activityError } = await supabase
+      // 4. DB
+      setUploadStatus('Guardando progreso...');
+      const { error: activityError } = await supabase
         .from('activities')
         .insert([
           {
@@ -51,15 +99,11 @@ function PhotoUpload({ user, onUploadComplete, onCancel }) {
             ai_score: pointsEarned,
             ai_metadata: aiResult
           }
-        ])
-        .select()
-        .single();
+        ]);
 
       if (activityError) throw activityError;
 
-      // 4. Si es válida, actualizar puntos y racha en el perfil
       if (pointsEarned > 0) {
-        // Obtenemos puntos actuales y última fecha para el cálculo de racha
         const { data: profile } = await supabase
           .from('profiles')
           .select('points, streak, last_action_at')
@@ -78,13 +122,10 @@ function PhotoUpload({ user, onUploadComplete, onCancel }) {
           const yesterdayStr = yesterday.toISOString().split('T')[0];
 
           if (lastActionDate === yesterdayStr) {
-            // Racha incrementa (vino ayer)
             newStreak += 1;
           } else if (lastActionDate !== today) {
-            // Racha se pierde (no vino ayer y no es hoy)
             newStreak = 1;
           }
-          // Si lastActionDate === today, no sumamos racha pero sí puntos (ya sumó racha hoy)
         }
 
         const newPoints = Math.min((profile.points || 0) + pointsEarned, 100);
@@ -107,9 +148,11 @@ function PhotoUpload({ user, onUploadComplete, onCancel }) {
       console.error('Error al subir:', error);
       alert('Error al subir la foto: ' + error.message);
     } finally {
-      setUploading(false);
+      setUploadStatus('');
     }
   };
+
+  const isUploading = uploadStatus !== '';
 
   return (
     <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center p-4 z-50">
@@ -119,7 +162,7 @@ function PhotoUpload({ user, onUploadComplete, onCancel }) {
 
         {!preview ? (
           <div 
-            onClick={() => fileInputRef.current.click()}
+            onClick={() => !isUploading && fileInputRef.current.click()}
             className="w-full aspect-square bg-green-50 border-4 border-dashed border-green-200 rounded-[30px] flex flex-col items-center justify-center cursor-pointer hover:bg-green-100 transition-colors"
           >
             <span className="text-5xl mb-2">📷</span>
@@ -128,12 +171,21 @@ function PhotoUpload({ user, onUploadComplete, onCancel }) {
         ) : (
           <div className="relative w-full aspect-square rounded-[30px] overflow-hidden border-4 border-green-500 shadow-lg mb-6">
             <img src={preview} alt="Vista previa" className="w-full h-full object-cover" />
-            <button 
-              onClick={() => { setImage(null); setPreview(null); }}
-              className="absolute top-4 right-4 bg-white/90 p-2 rounded-full shadow-md hover:bg-white transition-colors"
-            >
-              🔄
-            </button>
+            {!isUploading && (
+              <button 
+                onClick={() => { setImage(null); setPreview(null); }}
+                className="absolute top-4 right-4 bg-white/90 p-2 rounded-full shadow-md hover:bg-white transition-colors"
+              >
+                🔄
+              </button>
+            )}
+            {isUploading && (
+              <div className="absolute inset-0 bg-green-900/40 backdrop-blur-sm flex items-center justify-center">
+                <div className="bg-white px-6 py-3 rounded-full shadow-xl animate-bounce">
+                  <span className="font-black text-green-600">⚡ {uploadStatus}</span>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
@@ -150,15 +202,15 @@ function PhotoUpload({ user, onUploadComplete, onCancel }) {
           {preview && (
             <button 
               onClick={uploadPhoto}
-              disabled={uploading}
-              className={`btn-primary w-full py-4 text-lg ${uploading ? 'opacity-50' : ''}`}
+              disabled={isUploading}
+              className={`btn-primary w-full py-4 text-lg ${isUploading ? 'opacity-50' : ''}`}
             >
-              {uploading ? 'Validando con IA...' : '¡Enviar a Revisión! 🚀'}
+              {isUploading ? uploadStatus : '¡Enviar a Revisión! 🚀'}
             </button>
           )}
           <button 
             onClick={onCancel}
-            disabled={uploading}
+            disabled={isUploading}
             className="text-slate-400 font-bold py-2 hover:text-slate-600 transition-colors"
           >
             Cancelar
