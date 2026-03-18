@@ -44,30 +44,22 @@ function App() {
   useEffect(() => {
     // Optimización: Carga paralela de sesión y ajustes
     const initApp = async () => {
-      // Timeout agresivo para no dejar al usuario esperando pantalla en blanco
       const timeoutId = setTimeout(() => {
         setLoading(false);
-      }, 3500); 
+      }, 4000); 
 
       try {
         if (!supabase) return;
 
-        // Ejecutamos en paralelo para ganar velocidad
-        const [sessionRes, settingsRes] = await Promise.all([
-          supabase.auth.getSession(),
-          fetchSettings()
-        ]);
-
-        const { data: { session } } = sessionRes;
+        // Settings es independiente del usuario, lo cargamos primero
+        await fetchSettings();
         
-        if (session) {
-          await fetchProfile(session.user.id);
-        }
+        // El estado de sesión lo manejará onAuthStateChange al iniciar
       } catch (error) {
         console.error("Error en inicialización:", error);
       } finally {
         clearTimeout(timeoutId);
-        setLoading(false);
+        // El cargador se quitará cuando onAuthStateChange termine de procesar el perfil inicial
       }
     };
 
@@ -108,6 +100,7 @@ function App() {
           await fetchProfile(session.user.id);
         } else {
           setUser(null);
+          setLoading(false);
         }
       });
       subscription = data.subscription;
@@ -137,6 +130,8 @@ function App() {
       setStreak(data.streak || 1);
     } catch (err) {
       setUser({ id: userId, name: 'Estudiante', course: 'Global', isAdmin: false });
+    } finally {
+      setLoading(false);
     }
   };
 
