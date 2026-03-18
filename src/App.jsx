@@ -42,18 +42,36 @@ function App() {
   useEffect(() => {
     // 1. Verificar si hay una sesión activa al cargar
     const checkSession = async () => {
+      console.log("Iniciando checkSession...");
+      const timeoutId = setTimeout(() => {
+        console.warn("Timeout de carga alcanzado. Forzando fin de carga.");
+        setLoading(false);
+      }, 5000);
+
       try {
+        if (!supabase) {
+          console.error("La instancia de Supabase no está definida.");
+          return;
+        }
+
         const { data: { session }, error: sessionError } = await supabase.auth.getSession();
         if (sessionError) throw sessionError;
         
         if (session) {
+          console.log("Sesión encontrada para el usuario:", session.user.id);
           await fetchProfile(session.user.id);
+        } else {
+          console.log("No hay sesión activa.");
         }
-        await fetchSettings(); // Ahora lo esperamos para asegurar que se cargue el branding
+        
+        console.log("Cargando ajustes globales...");
+        await fetchSettings();
       } catch (error) {
-        console.error("Error al inicializar sesión o cargar ajustes:", error);
+        console.error("Error crítico en inicialización:", error);
       } finally {
+        clearTimeout(timeoutId);
         setLoading(false);
+        console.log("Carga finalizada.");
       }
     };
 
@@ -87,15 +105,26 @@ function App() {
     checkSession();
 
     // 2. Escuchar cambios en la autenticación
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      if (session) {
-        await fetchProfile(session.user.id);
-      } else {
-        setUser(null);
+    let subscription;
+    try {
+      if (supabase?.auth) {
+        const { data } = supabase.auth.onAuthStateChange(async (_event, session) => {
+          console.log("Cambio en estado de auth:", _event);
+          if (session) {
+            await fetchProfile(session.user.id);
+          } else {
+            setUser(null);
+          }
+        });
+        subscription = data.subscription;
       }
-    });
+    } catch (err) {
+      console.error("Error al suscribirse a cambios de auth:", err);
+    }
 
-    return () => subscription.unsubscribe();
+    return () => {
+      if (subscription) subscription.unsubscribe();
+    };
   }, []);
 
   const fetchProfile = async (userId) => {
