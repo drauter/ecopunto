@@ -1,9 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { supabase } from './supabaseClient';
 
 function Register({ onRegister }) {
   const [isLogin, setIsLogin] = useState(false);
   const [loading, setLoading] = useState(false);
+  const loadingRef = useRef(false); // Ref para evitar stale closure en el timeout
   const [error, setError] = useState(null);
   const [formData, setFormData] = useState({
     name: '',
@@ -15,13 +16,15 @@ function Register({ onRegister }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
+    loadingRef.current = true;
     setError(null);
 
-    // Aumentamos a 45s para soportar mejor redes móviles inestables
+    // Timeout de seguridad: Si pasan 45s y seguimos cargando, forzamos error
     const timeoutId = setTimeout(() => {
-      if (loading) {
-        setError("La conexión está tardando más de lo esperado. Por favor, intenta de nuevo o revisa tu señal.");
+      if (loadingRef.current) {
+        setError("La conexión es muy lenta o inestable. Por favor, intenta de nuevo.");
         setLoading(false);
+        loadingRef.current = false;
       }
     }, 45000);
 
@@ -44,7 +47,7 @@ function Register({ onRegister }) {
           }
         });
         if (signUpError) throw signUpError;
-        if (!authData?.user) throw new Error("No se pudo completar el registro.");
+        if (!authData?.user) throw new Error("No se pudo crear la cuenta.");
 
         const { error: profileError } = await supabase
           .from('profiles')
@@ -60,24 +63,28 @@ function Register({ onRegister }) {
         if (profileError) throw profileError;
       }
       
-      // Limpiamos el timeout ANTES de llamar a onRegister para evitar doble mensaje
       clearTimeout(timeoutId);
+      loadingRef.current = false;
       onRegister();
     } catch (err) {
       clearTimeout(timeoutId);
+      loadingRef.current = false;
+      setLoading(false);
       console.error("Auth error:", err);
-      // Errores comunes de Supabase Auth
+      
       if (err.message?.includes("Invalid login credentials")) {
-        setError("Correo o contraseña incorrectos. Por favor verifica.");
+        setError("Correo o contraseña incorrectos.");
       } else if (err.message?.includes("User already registered")) {
-        setError("Este correo ya está registrado. Prueba a iniciar sesión.");
+        setError("Este correo ya está registrado.");
       } else {
-        setError(err.message || "Ocurrió un error inesperado al conectar con el servidor.");
+        setError(err.message || "Error al conectar con el servidor.");
       }
     } finally {
-      // No hacemos setLoading(false) aquí si ya se llamó a onRegister() 
-      // pero por seguridad lo dejamos para casos de error
-      setLoading(false);
+      // El setLoading(false) aquí podría causar problemas si onRegister() ya cambió la vista
+      // así que solo lo hacemos si seguimos en esta vista (loadingRef es false)
+      if (!loadingRef.current) {
+        setLoading(false);
+      }
     }
   };
 
@@ -92,7 +99,7 @@ function Register({ onRegister }) {
     <div className="min-h-screen bg-[#f0fdf4] flex items-center justify-center p-4 md:p-8 lg:p-12">
       <div className="w-full max-w-5xl bg-white rounded-[3rem] shadow-2xl overflow-hidden flex flex-col md:flex-row border border-green-100 min-h-[600px]">
         
-        {/* Lado Izquierdo: Branding / Info (Oculto en móvil o arriba) */}
+        {/* Lado Izquierdo: Branding */}
         <div className="md:w-1/2 bg-gradient-to-br from-green-500 to-emerald-700 p-12 text-white flex flex-col justify-center relative overflow-hidden">
           <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full -mr-20 -mt-20 blur-3xl"></div>
           <div className="absolute bottom-0 left-0 w-64 h-64 bg-green-400/20 rounded-full -ml-20 -mb-20 blur-3xl"></div>
@@ -206,7 +213,8 @@ function Register({ onRegister }) {
             <div className="text-center mt-8 pt-6 border-t border-green-50">
               <button 
                 onClick={() => setIsLogin(!isLogin)}
-                className="text-green-600 font-black hover:text-green-800 transition-colors uppercase text-xs tracking-widest"
+                disabled={loading}
+                className="text-green-600 font-black hover:text-green-800 transition-colors uppercase text-xs tracking-widest disabled:opacity-30"
               >
                 {isLogin ? '¿Eres nuevo? Crea una cuenta' : '¿Ya eres miembro? Inicia sesión'}
               </button>
